@@ -7,7 +7,6 @@ export abstract class Component<T> {
     }
 
     // Инструментарий для работы с DOM в дочерних компонентах
-
     // Установить изображение с альтернативным текстом
     protected setImage(element: HTMLImageElement, src: string, alt?: string) {
         if (element) {
@@ -15,6 +14,19 @@ export abstract class Component<T> {
             if (alt) {
                 element.alt = alt;
             }
+        }
+    }
+
+    protected setText(element: HTMLElement, value: unknown) {
+        if (element) {
+            element.textContent = String(value);
+        }
+    }
+
+    protected setDisabled(element: HTMLElement, state: boolean) {
+        if (element) {
+            if (state) element.setAttribute('disabled', 'disabled');
+            else element.removeAttribute('disabled');
         }
     }
 
