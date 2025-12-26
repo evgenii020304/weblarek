@@ -2,14 +2,15 @@ import { BasketModel } from './components/models/BasketModel';
 import { BuyerModel } from './components/models/BuyerModel';
 import { ProductModel } from './components/models/ProductModel';
 import { Api } from './components/base/Api';
-import { IApiProduct, TItemCategory } from './types';
+import { IProduct, TItemCategory } from './types';
 import { apiProducts } from './utils/data';
+import {API_URL} from "./utils/constants.ts";
 
 console.log('ТЕСТИРОВАНИЕ ВСЕХ МОДЕЛЕЙ\n');
 
 console.log('\n\n1. ПОДГОТОВКА ДАННЫХ:');
 
-const testApiProducts: IApiProduct[] = apiProducts.items.map(item => ({
+const testApiProducts: IProduct[] = apiProducts.items.map(item => ({
     ...item,
     category: item.category as TItemCategory
 }));
@@ -25,9 +26,27 @@ productModel.setItems(testApiProducts);
 
 const products = productModel.getItems();
 console.log('- Обработано товаров:', productModel.getTotalCount());
-console.log('- Первый товар:', products[0].title, `(productIndex: ${products[0].productIndex})`);
-console.log('- Поиск товара по ID:',
-    productModel.getItemById('854cef69-976d-4c2a-a18c-2aa45046c390')?.title || 'Не найден');
+console.log('- Первый товар:', products[0].title);
+
+console.log(
+    '- Поиск товара по ID:',
+    productModel.getItemById('854cef69-976d-4c2a-a18c-2aa45046c390')?.title || 'Не найден'
+);
+
+// ТЕСТ selectedProduct
+console.log('- Установка выбранного товара');
+productModel.setSelectedProduct(products[0]);
+console.log(
+    '  Выбранный товар:',
+    productModel.getSelectedProduct()?.title
+);
+
+console.log('- Сброс выбранного товара');
+productModel.clearSelectedProduct();
+console.log(
+    '  После сброса:',
+    productModel.getSelectedProduct()
+);
 
 console.log('\n\n3. ТЕСТИРОВАНИЕ BASKET MODEL:');
 const basketModel = new BasketModel();
@@ -35,7 +54,13 @@ const basketModel = new BasketModel();
 products.forEach(product => basketModel.addItem(product));
 console.log('- Добавлено товаров в корзину:', basketModel.getCount());
 console.log('- Сумма корзины:', basketModel.getTotal(), '₽');
-console.log('- Проверка дубликатов: при повторном добавлении количество не меняется');
+
+console.log('- Содержимое корзины:');
+basketModel.items.forEach(item => {
+    console.log(`  • ${item.title} — ${item.price ?? 'Бесплатно'} ₽`);
+});
+
+console.log('- Проверка дубликатов:');
 const initialCount = basketModel.getCount();
 basketModel.addItem(products[0]);
 console.log(`  Было: ${initialCount}, стало: ${basketModel.getCount()}`);
@@ -43,7 +68,12 @@ console.log(`  Было: ${initialCount}, стало: ${basketModel.getCount()}`
 console.log('- Удаление товара:');
 const productToRemove = products[1];
 basketModel.removeItem(productToRemove.id);
-console.log(`  Удален "${productToRemove.title}", осталось: ${basketModel.getCount()} товаров`);
+console.log(`  Удален "${productToRemove.title}"`);
+
+console.log('- Осталось в корзине:');
+basketModel.items.forEach(item => {
+    console.log(`  • ${item.title}`);
+});
 
 basketModel.clear();
 console.log('- После очистки корзины:', basketModel.getCount(), 'товаров');
@@ -62,15 +92,9 @@ buyerModel.setData({
     phone: '+79123456789',
     address: 'ул. Тестовая, 1'
 });
-console.log('  Данные:', buyerModel.getData());
-console.log('  Валидны:', buyerModel.isValid());
 
-try {
-    const orderData = buyerModel.getOrderData();
-    console.log('  Данные для заказа:', orderData);
-} catch (error: any) {
-    console.log('  Ошибка:', error.message);
-}
+console.log('  Данные покупателя:', buyerModel.getData());
+console.log('  Валидны:', buyerModel.isValid());
 
 console.log('\n- Тест невалидного email:');
 buyerModel.setData({ email: 'неправильный-email' });
@@ -117,8 +141,22 @@ if (scenarioBuyerModel.isValid()) {
 }
 
 console.log('\n\n6. ТЕСТИРОВАНИЕ API КЛАССА:');
-const api = new Api('http://localhost:3000/api/weblarek');
-
+const api = new Api(API_URL);
 console.log('- Создан экземпляр Api');
 console.log('  baseUrl:', api.baseUrl);
+
+console.log('\n7. ЗАПРОС /product ЧЕРЕЗ Api:');
+
+api.get<{ items: IProduct[] }>('/product')
+    .then(response => {
+        console.log('Ответ сервера /product:');
+        console.log(response.items);
+
+        console.log('\nЗапись товаров в ProductModel:');
+        productModel.setItems(response.items);
+        console.log(productModel.getItems());
+    })
+    .catch(error => {
+        console.error('Ошибка при загрузке продуктов:', error);
+    });
 

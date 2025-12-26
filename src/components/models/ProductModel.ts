@@ -1,13 +1,13 @@
-import { IApiProduct, IProduct } from '../../types';
+import { IProduct } from '../../types';
 
 export class ProductModel {
     private _items: IProduct[] = [];
+    private _selectedProduct: IProduct | null = null;
 
-    setItems(items: IApiProduct[]): void {
-        this._items = items.map((item, index) => ({
-            ...item,
-            productIndex: index + 1
-        }));
+    constructor() {}
+
+    setItems(items: IProduct[]): void {
+        this._items = items;
     }
 
     getItems(): IProduct[] {
@@ -20,5 +20,17 @@ export class ProductModel {
 
     getTotalCount(): number {
         return this._items.length;
+    }
+
+    setSelectedProduct(product: IProduct | null): void {
+        this._selectedProduct = product;
+    }
+
+    getSelectedProduct(): IProduct | null {
+        return this._selectedProduct;
+    }
+
+    clearSelectedProduct(): void {
+        this._selectedProduct = null;
     }
 }

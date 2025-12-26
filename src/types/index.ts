@@ -3,7 +3,7 @@ export type TItemPrice = number | null;
 export type TPayment = 'card' | 'cash' | null;
 export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 
-export interface IApiProduct  {
+export interface IProduct  {
     id: string;
     description: string;
     image: string;
@@ -12,8 +12,9 @@ export interface IApiProduct  {
     price: TItemPrice;
 }
 
-export interface IProduct extends IApiProduct {
-    productIndex: number;
+export interface IApiResponse {
+    total: number;
+    items: IProduct[];
 }
 
 export interface IBasket {
@@ -33,15 +34,18 @@ export interface IBuyer {
     address: string;
 }
 
-export interface IApiResponse  {
+export interface IOrderRequest {
+    payment: TPayment;
+    email: string;
+    phone: string;
+    address: string;
     total: number;
-    items: IApiProduct[];
+    items: string[];
 }
 
-export interface IOrderRequest {
-    id?: string;
-    total?: number;
-    error?: string;
+export interface IOrderResponse {
+    id: string;
+    total: number;
 }
 
 export interface IApi {
