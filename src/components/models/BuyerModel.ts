@@ -18,20 +18,20 @@ export class BuyerModel {
             errors.payment = 'Выберите способ оплаты';
         }
 
-        if (!this._data.address || this._data.address.trim().length < 5) {
-            errors.address = 'Введите корректный адрес';
+        if (!this._data.address || this._data.address.trim().length === 0) {
+            errors.address = 'Введите адрес';
         }
 
-        if (this._data.email !== undefined) {
-            if (!this._data.email || !this.isValidEmail(this._data.email)) {
-                errors.email = 'Введите корректный email';
-            }
+        if (!this._data.email || this._data.email.trim().length === 0) {
+            errors.email = 'Введите email';
+        } else if (!this.isValidEmail(this._data.email)) {
+            errors.email = 'Введите корректный email';
         }
 
-        if (this._data.phone !== undefined) {
-            if (!this._data.phone || !this.isValidPhone(this._data.phone)) {
-                errors.phone = 'Введите корректный телефон';
-            }
+        if (!this._data.phone || this._data.phone.trim().length === 0) {
+            errors.phone = 'Введите телефон';
+        } else if (!this.isValidPhone(this._data.phone)) {
+            errors.phone = 'Введите корректный телефон';
         }
 
         return errors;
@@ -43,11 +43,15 @@ export class BuyerModel {
     }
 
     getOrderData(): IBuyer {
+        if (!this.isValid()) {
+            throw new Error('Данные покупателя не валидны');
+        }
+
         return {
-            payment: this._data.payment || null,
-            email: this._data.email || '',
-            phone: this._data.phone || '',
-            address: this._data.address || ''
+            payment: this._data.payment!,
+            email: this._data.email!,
+            phone: this._data.phone!,
+            address: this._data.address!
         };
     }
 

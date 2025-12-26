@@ -22,7 +22,9 @@ export class BasketModel implements IBasket {
     }
 
     getTotal(): number {
-        return this._items.reduce((total, item) => total + (item.price || 0), 0);
+        return this._items.reduce((total, item) => {
+            return total + (item.price || 0);
+        }, 0);
     }
 
     getCount(): number {

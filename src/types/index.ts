@@ -3,14 +3,17 @@ export type TItemPrice = number | null;
 export type TPayment = 'card' | 'cash' | null;
 export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 
-export interface IProduct {
+export interface IApiProduct  {
     id: string;
-    productIndex: number;
     description: string;
     image: string;
     title: string;
     category: TItemCategory;
     price: TItemPrice;
+}
+
+export interface IProduct extends IApiProduct {
+    productIndex: number;
 }
 
 export interface IBasket {
@@ -30,20 +33,21 @@ export interface IBuyer {
     address: string;
 }
 
-export interface IApiResponse {
-    items: IProduct[];
+export interface IApiResponse  {
+    total: number;
+    items: IApiProduct[];
+}
+
+export interface IOrderRequest {
+    id?: string;
+    total?: number;
+    error?: string;
 }
 
 export interface IApi {
     baseUrl: string;
     get<T extends object>(uri: string): Promise<T>;
     post<T extends object>(uri: string, data: object, method?: ApiPostMethods): Promise<T>;
-}
-
-export interface IOrderResponse {
-    id?: string;
-    total?: number;
-    error?: string;
 }
 
 export interface IValidationResult {
