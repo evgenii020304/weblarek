@@ -30,7 +30,7 @@ export class ProductModel {
         return this._selectedProduct;
     }
 
-    clearSelectedProduct(): void {
+    clearSelectedProduct() {
         this._selectedProduct = null;
     }
 }

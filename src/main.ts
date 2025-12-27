@@ -2,7 +2,8 @@ import { BasketModel } from './components/models/BasketModel';
 import { BuyerModel } from './components/models/BuyerModel';
 import { ProductModel } from './components/models/ProductModel';
 import { Api } from './components/base/Api';
-import { IProduct, TItemCategory } from './types';
+import { IProduct, TItemCategory, IOrderRequest } from './types';
+import { ApiShop } from './components/api/ApiShop';
 import { apiProducts } from './utils/data';
 import {API_URL} from "./utils/constants.ts";
 
@@ -145,18 +146,54 @@ const api = new Api(API_URL);
 console.log('- Создан экземпляр Api');
 console.log('  baseUrl:', api.baseUrl);
 
-console.log('\n7. ЗАПРОС /product ЧЕРЕЗ Api:');
+console.log('\n\n7. ЗАПРОС /product ЧЕРЕЗ ApiShop:');
 
-api.get<{ items: IProduct[] }>('/product')
-    .then(response => {
+const apiShop = new ApiShop(api);
+
+apiShop.getProducts()
+    .then(serverProducts => {
         console.log('Ответ сервера /product:');
-        console.log(response.items);
+        console.log(serverProducts);
+
+        productModel.setItems(serverProducts);
+
+        products.length = 0;
+        products.push(...serverProducts);
 
         console.log('\nЗапись товаров в ProductModel:');
-        productModel.setItems(response.items);
         console.log(productModel.getItems());
+    });
+
+console.log('\n\n8. ТЕСТ sendOrder ЧЕРЕЗ ApiShop:');
+
+const orderBasket = new BasketModel();
+orderBasket.addItem(products[0]);
+orderBasket.addItem(products[1]);
+
+const orderBuyer = new BuyerModel();
+orderBuyer.setData({
+    payment: 'card',
+    email: 'order@test.ru',
+    phone: '+79990001122',
+    address: 'г. Москва, ул. Заказная, 5'
+});
+
+const orderData: IOrderRequest = {
+    items: orderBasket.items.map(item => item.id),
+    total: orderBasket.getTotal(),
+    ...orderBuyer.getData()
+};
+
+console.log('Отправляем заказ:', orderData);
+
+apiShop.sendOrder(orderData)
+    .then(response => {
+        console.log('Заказ успешно создан!');
+        console.log('ID заказа:', response.id);
+        console.log('Сумма заказа:', response.total);
     })
     .catch(error => {
-        console.error('Ошибка при загрузке продуктов:', error);
+        console.error('Ошибка при отправке заказа:', error);
     });
+
 
