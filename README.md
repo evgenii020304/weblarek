@@ -326,7 +326,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 `getItems(): IProduct[]` — возвращает все товары каталога
 `getItemById(id: string): IProduct | undefined` — находит товар по его уникальному идентификатору
 
-### Класс CatalogView
+### Класс Card
 Назначение: View-компонент для отображения каталога товаров на главной странице.
 
 **Конструктор:**
@@ -337,7 +337,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 
 `render(data?: Partial<ICatalogData>): HTMLElement` — рендерит каталог товаров, создавая карточки для каждого товара, настраивает обработчики кликов
 
-### Класс CardView
+### Класс BasketItem
 Назначение: View-компонент для отображения карточки товара в разных контекстах (каталог, превью).
 
 **Поля класса:**
@@ -371,7 +371,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 `render(data)` — рендерит список товаров в корзине и общую сумму
 
 
-### Класс ModalView
+### Класс FormContact
 Назначение: View-компонент для управления модальными окнами.
 
 **Методы класса:**
@@ -380,7 +380,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 `close()` — закрывает модальное окно
 `render(content: HTMLElement)` — обновляет содержимое модального окна
 
-### Класс OrderFormView
+### Класс FormOrder
 Назначение: View-компонент для формы оформления заказа (способ оплаты + адрес).
 
 **Сеттеры:**
@@ -393,7 +393,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 `selectPayment()` — выбирает способ оплаты
 `validateForm()` — валидирует форму и управляет состоянием кнопки отправки
 
-### Класс ContactsFormView
+### Класс CardPreview
 Назначение: View-компонент для формы контактов (email + телефон) в процессе оформления заказа. Это третий шаг оформления заказа после выбора товаров и указания адреса доставки.
 
 **Конструктор:**
@@ -417,7 +417,7 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 `private isValidPhone(phone: string): boolean` — Проверяет корректность номера телефона (более 10 цифр)
 `private renderErrors(errors: IValidationResult)` — Отображает сообщения об ошибках валидации
 
-### Класс SuccessView
+### Класс Success
 Назначение: View-компонент для отображения экрана успешного оформления заказа. Показывает итоговую сумму и предоставляет кнопку для закрытия модального окна.
 
 **Поля класса:**
@@ -452,3 +452,188 @@ export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
 
 // 6. Показ результата
 `successView.render() → successView.onClose → modalView.close()`
+
+
+### Компоненты представления
+
+#### 1. Card.ts - Карточка товара в каталоге
+Назначение: Отображение товара в каталоге на главной странице.
+
+**Интерфейс:**
+
+```
+interface ICard {
+render(data: IProduct): HTMLElement;
+}
+```
+
+**Основные свойства:**
+
+`_cardElement: HTMLElement` - DOM элемент карточки
+`_cardCategory: HTMLElement` - элемент категории товара
+`_cardTitle: HTMLElement` - заголовок товара
+`_cardImage: HTMLImageElement` - изображение товара
+`_cardPrice: HTMLElement` - цена товара
+
+**Методы:**
+
+`render(data: IProduct): HTMLElement` - рендерит карточку с данными товара
+`setCategory(value: string): void` - устанавливает категорию и соответствующий CSS класс
+`formatPrice(value: number | null): string` - форматирует цену ("Бесценно" или "XXX синапсов")
+
+**Используемые CSS классы:**
+
+`.card` - основная карточка
+`.card__category` - категория товара
+`.card__category_soft, .card__category_hard, etc.` - модификаторы категорий
+`.card__title` - заголовок
+`.card__image` - изображение
+`.card__price` - цена
+
+#### 2. CardPreview.ts - Карточка товара в модальном окне
+Назначение: Расширенное отображение товара при клике (превью).
+
+**Наследует: Card**
+
+**Дополнительные свойства:**
+
+`_cardText: HTMLElement` - описание товара
+`_cardButton: HTMLButtonElement` - кнопка "Купить"
+
+**Особенности:**
+
+Отображает полное описание товара
+Кнопка блокируется, если товар недоступен (цена = null)
+Генерирует событие card:addBasket при клике
+
+#### 3. Basket.ts - Модальное окно корзины
+Назначение: Отображение списка товаров в корзине.
+
+**Интерфейс:**
+
+```
+interface IBasket {
+basket: HTMLElement;
+title: HTMLElement;
+basketList: HTMLElement;
+button: HTMLButtonElement;
+basketPrice: HTMLElement;
+headerBasketButton: HTMLButtonElement;
+headerBasketCounter: HTMLElement;
+renderHeaderBasketCounter(value: number): void;
+renderSumAllProducts(sumAll: number): void;
+render(): HTMLElement;
+}
+```
+
+**События:**
+
+`basket:open` - при клике на иконку корзины в хедере
+`order:open` - при клике на кнопку "Оформить" в корзине
+
+**Методы:**
+
+`set items(items: HTMLElement[])` - устанавливает список товаров корзины
+`renderHeaderBasketCounter(value: number)` - обновляет счетчик в хедере
+`renderSumAllProducts(sumAll: number)` - обновляет общую сумму
+
+#### 4. BasketItem.ts - Элемент товара в корзине
+Назначение: Отображение отдельного товара в списке корзины.
+
+**Свойства:**
+
+`basketItem: HTMLElement` - элемент списка
+`index: HTMLElement` - порядковый номер
+`title: HTMLElement` - название товара
+`price: HTMLElement` - цена
+`buttonDelete: HTMLButtonElement` - кнопка удаления
+
+#### 5. Modal.ts - Базовое модальное окно
+Назначение: Управление модальными окнами приложения.
+
+**Интерфейс:**
+
+```
+interface IModal {
+open(): void;
+close(): void;
+render(): HTMLElement;
+}
+```
+
+**События:**
+
+`modal:open` - при открытии модального окна
+`modal:close` - при закрытии модального окна
+
+**Особенности:**
+
+Автоматическая блокировка фона при открытии
+Закрытие по клику вне контейнера или на крестик
+
+#### 6. FormOrder.ts - Форма оформления заказа (шаг 1)
+Назначение: Форма для ввода адреса и выбора способа оплаты.
+
+**События:**
+
+`order:paymentSelection` - при выборе способа оплаты
+`order:changeAddress` - при изменении адреса
+`order:submit` - при отправке формы (нажатии "Далее")
+
+**Валидация:**
+
+Кнопка "Далее" активна только при выбранной оплате и заполненном адресе
+
+#### 7. FormContact.ts - Форма контактов (шаг 2)
+Назначение: Форма для ввода email и телефона.
+
+**События:**
+
+`contacts:changeInput` - при изменении полей ввода
+`contacts:submit` - при отправке формы (нажатии "Оплатить")
+
+**Валидация:**
+
+Кнопка активна только при валидных email и телефоне
+
+#### 8. Success.ts - Окно успешного заказа
+Назначение: Отображение подтверждения успешного оформления заказа.
+
+**Свойства:**
+
+`success: HTMLElement` - контейнер
+`description: HTMLElement` - описание с суммой
+`button: HTMLButtonElement` - кнопка закрытия
+
+#### 9. HeaderView.ts - Хедер приложения
+Назначение: Отображение счетчика товаров в корзине в хедере.
+
+**События:**
+
+`basket:open` - при клике на иконку корзины
+
+### События:
+Просмотр товаров:
+```
+card:select - выбор карточки товара → открытие превью
+card:addBasket - добавление товара в корзину
+```
+Работа с корзиной:
+```
+basket:open - открытие корзины
+basket:remove - удаление товара из корзины
+order:open - начало оформления заказа
+```
+Оформление заказа:
+```
+order:paymentSelection - выбор способа оплаты
+order:changeAddress - изменение адреса доставки
+order:submit - переход к форме контактов
+contacts:changeInput - изменение email/телефона
+contacts:submit - завершение оформления заказа
+```
+Модальные окна:
+```
+modal:close - закрытие модального окна
+success:close - закрытие окна успеха
+```

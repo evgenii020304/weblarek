@@ -17,6 +17,10 @@ export interface IApiResponse {
     items: IProduct[];
 }
 
+export interface IActions {
+    onClick: (event: MouseEvent) => void;
+}
+
 export interface IBasket {
     items: IProduct[];
     addItem(product: IProduct): void;
