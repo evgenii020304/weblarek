@@ -1,11 +1,15 @@
 import { IEvents } from "../base/Events.ts";
+import { ensureElement, cloneTemplate } from "../../utils/utils";
+import { IValidationResult } from "../../types";
 
 export interface IOrder {
     formOrder: HTMLFormElement;
     buttonAll: HTMLButtonElement[];
-    paymentSelection: String;
+    paymentSelection: string;
     formErrors: HTMLElement;
     render(): HTMLElement;
+    set valid(value: boolean);
+    set errors(value: IValidationResult);
 }
 
 export class Order implements IOrder {
@@ -15,16 +19,15 @@ export class Order implements IOrder {
     formErrors: HTMLElement;
 
     constructor(container: HTMLTemplateElement, protected events: IEvents) {
-        this.formOrder = container.content.querySelector('.form')!.cloneNode(true) as HTMLFormElement;
-        this.buttonAll = Array.from(this.formOrder.querySelectorAll('.button_alt'));
-        this.buttonSubmit = this.formOrder.querySelector('.order__button')!;
-        this.formErrors = this.formOrder.querySelector('.form__errors')!;
+        this.formOrder = cloneTemplate<HTMLFormElement>(container);
+        this.buttonAll = Array.from(this.formOrder.querySelectorAll('.button_alt')) as HTMLButtonElement[];
+        this.buttonSubmit = ensureElement<HTMLButtonElement>('.order__button', this.formOrder);
+        this.formErrors = ensureElement<HTMLElement>('.form__errors', this.formOrder);
 
         this.buttonAll.forEach(item => {
             item.addEventListener('click', () => {
                 this.paymentSelection = item.name;
                 events.emit('order:paymentSelection', item);
-                this.validateForm();
             });
         });
 
@@ -33,7 +36,6 @@ export class Order implements IOrder {
             const field = target.name;
             const value = target.value;
             this.events.emit(`order:changeAddress`, { field, value });
-            this.validateForm();
         });
 
         this.formOrder.addEventListener('submit', (event: Event) => {
@@ -42,23 +44,19 @@ export class Order implements IOrder {
         });
     }
 
-    private validateForm(): void {
-        const addressInput = this.formOrder.querySelector('input[name="address"]') as HTMLInputElement;
-        const paymentSelected = this.buttonAll.some(btn => btn.classList.contains('button_alt-active'));
-        const addressFilled = addressInput?.value.trim().length > 0;
-
-        this.buttonSubmit.disabled = !(paymentSelected && addressFilled);
-    }
-
     set paymentSelection(paymentMethod: string) {
         this.buttonAll.forEach(item => {
             item.classList.toggle('button_alt-active', item.name === paymentMethod);
         });
-        this.validateForm();
     }
 
     set valid(value: boolean) {
         this.buttonSubmit.disabled = !value;
+    }
+
+    set errors(value: IValidationResult) {
+        const errorMessages = Object.values(value).filter(Boolean);
+        this.formErrors.textContent = errorMessages.join('. ');
     }
 
     render() {

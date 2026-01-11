@@ -1,5 +1,5 @@
-import { createElement } from "../../utils/utils";
 import { IEvents } from "../base/Events";
+import { ensureElement } from "../../utils/utils";
 
 export interface IBasket {
     basket: HTMLElement;
@@ -7,9 +7,6 @@ export interface IBasket {
     basketList: HTMLElement;
     button: HTMLButtonElement;
     basketPrice: HTMLElement;
-    headerBasketButton: HTMLButtonElement;
-    headerBasketCounter: HTMLElement;
-    renderHeaderBasketCounter(value: number): void;
     renderSumAllProducts(sumAll: number): void;
     render(): HTMLElement;
 }
@@ -20,46 +17,28 @@ export class Basket implements IBasket {
     basketList: HTMLElement;
     button: HTMLButtonElement;
     basketPrice: HTMLElement;
-    headerBasketButton: HTMLButtonElement;
-    headerBasketCounter: HTMLElement;
 
     constructor(container: HTMLElement, protected events: IEvents) {
-        this.basket = container.querySelector('.basket')!.cloneNode(true) as HTMLElement;
+        this.basket = container;
 
-        this.title = this.basket.querySelector('.modal__title')!;
-        this.basketList = this.basket.querySelector('.basket__list')!;
-        this.button = this.basket.querySelector('.basket__button')!;
-        this.basketPrice = this.basket.querySelector('.basket__price')!;
-
-        this.headerBasketButton = document.querySelector('.header__basket')!;
-        this.headerBasketCounter = document.querySelector('.header__basket-counter')!;
+        this.title = ensureElement<HTMLElement>('.modal__title', this.basket);
+        this.basketList = ensureElement<HTMLElement>('.basket__list', this.basket);
+        this.button = ensureElement<HTMLButtonElement>('.basket__button', this.basket);
+        this.basketPrice = ensureElement<HTMLElement>('.basket__price', this.basket);
 
         this.button.addEventListener('click', () => {
             this.events.emit('order:open');
         });
-
-        this.headerBasketButton.addEventListener('click', () => {
-            this.events.emit('basket:open');
-        });
     }
 
     set items(items: HTMLElement[]) {
-
         if (items.length) {
             this.basketList.replaceChildren(...items);
             this.button.removeAttribute('disabled');
         } else {
             this.button.setAttribute('disabled', 'disabled');
-            this.basketList.replaceChildren(
-                createElement<HTMLParagraphElement>('p', {
-                    textContent: 'Корзина пуста'
-                })
-            );
+            this.basketList.innerHTML = '';
         }
-    }
-
-    renderHeaderBasketCounter(value: number) {
-        this.headerBasketCounter.textContent = String(value);
     }
 
     renderSumAllProducts(sumAll: number) {

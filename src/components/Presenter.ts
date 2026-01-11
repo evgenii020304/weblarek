@@ -1,21 +1,23 @@
-import { IEvents } from "./base/Events.ts";
+import { IEvents } from "./base/Events";
 import { Modal } from "./views/Modal";
 import { Basket } from "./views/Basket";
 import { Success } from "./views/Success";
 import { Order } from "./views/FormOrder";
 import { Contacts } from "./views/FormContact";
-import { Card } from "./views/Card";
 import { CardPreview } from "./views/CardPreview";
 import { BasketItem } from "./views/BasketItem";
+import { CatalogView } from "./views/CatalogView";
 import { HeaderView } from "./views/HeaderView";
 import { ProductModel } from "./models/ProductModel";
 import { BasketModel } from "./models/BasketModel";
 import { BuyerModel } from "./models/BuyerModel";
-import { IProduct, IOrderRequest, TPayment } from "../types";
-import { Api } from "./base/Api.ts";
+import { IOrderRequest, TPayment } from "../types";
+import { ApiShop } from "./api/ApiShop";
 
 export class Presenter {
-    private headerView: HeaderView;
+    private catalogView!: CatalogView;
+    private cardPreview!: CardPreview;
+    private isPreviewInBasket = false;
 
     constructor(
         private events: IEvents,
@@ -27,18 +29,36 @@ export class Presenter {
         private successView: Success,
         private orderForm: Order,
         private contactsForm: Contacts,
-        private api: Api,
+        private headerView: HeaderView,
+        private apiShop: ApiShop,
         private cardTemplate: HTMLTemplateElement,
-        private basketItemTemplate: HTMLElement,
-        headerContainer: HTMLElement
+        private basketItemTemplate: HTMLTemplateElement,
+        private cardPreviewTemplate: HTMLTemplateElement,
+        private catalogContainer: HTMLElement
     ) {
-        this.headerView = new HeaderView(events, headerContainer);
         this.init();
     }
 
     private init(): void {
+        this.initializeViews();
         this.setupEventListeners();
         this.loadProducts();
+    }
+
+    private initializeViews(): void {
+        this.catalogView = new CatalogView(
+            this.catalogContainer,
+            this.events,
+            this.cardTemplate
+        );
+
+        this.cardPreview = new CardPreview(
+            this.cardPreviewTemplate,
+            this.events,
+            {
+                onClick: () => this.handlePreviewButtonClick()
+            }
+        );
     }
 
     private setupEventListeners(): void {
@@ -46,36 +66,52 @@ export class Presenter {
             this.openProductDetails(data.id);
         });
 
-        this.events.on('card:addBasket', (data: { id: string }) => {
-            this.addToBasket(data.id);
-        });
-
         this.events.on('basket:open', () => {
-            this.openBasket();
+            this.updateBasketView();
+            this.modal.content = this.basketView.render();
+            this.modal.open();
         });
 
         this.events.on('basket:remove', (data: { id: string }) => {
-            this.removeFromBasket(data.id);
+            this.basketModel.removeItem(data.id);
+            this.updateHeader();
+            this.updateBasketView();
         });
 
         this.events.on('order:open', () => {
-            this.openOrderForm();
+            this.buyerModel.clear();
+            this.orderForm.paymentSelection = '';
+            this.orderForm.valid = false;
+            this.modal.content = this.orderForm.render();
+            this.modal.open();
         });
 
         this.events.on('order:paymentSelection', (button: HTMLButtonElement) => {
-            this.selectPayment(button);
+            this.buyerModel.setData({ payment: button.name as TPayment });
+            this.validateOrderForm();
         });
 
         this.events.on('order:changeAddress', (data: { field: string; value: string }) => {
-            this.updateAddress(data.value);
+            if (data.field === 'address') {
+                this.buyerModel.setData({ address: data.value });
+                this.validateOrderForm();
+            }
         });
 
         this.events.on('order:submit', () => {
-            this.validateOrderAndOpenContacts();
+            if (this.validateOrderForm()) {
+                this.modal.content = this.contactsForm.render();
+                this.contactsForm.valid = false;
+                this.modal.open();
+            }
         });
 
         this.events.on('contacts:changeInput', (data: { field: string; value: string }) => {
-            this.updateContact(data.field, data.value);
+            if (data.field === 'email' || data.field === 'phone') {
+                const updateData = { [data.field]: data.value };
+                this.buyerModel.setData(updateData);
+                this.validateContactForm();
+            }
         });
 
         this.events.on('contacts:submit', () => {
@@ -83,51 +119,25 @@ export class Presenter {
         });
 
         this.events.on('success:close', () => {
-            this.closeSuccess();
+            this.modal.close();
         });
 
         this.events.on('modal:close', () => {
             this.modal.locked = false;
             this.productModel.clearSelectedProduct();
-        });
-
-        this.events.on('order:submit', () => {
-            this.validateOrderAndOpenContacts();
-        });
-
-        this.events.on('contacts:submit', () => {
-            console.log('Presenter: contacts:submit получено');
-            this.submitOrder();
+            this.isPreviewInBasket = false;
         });
     }
 
     private async loadProducts(): Promise<void> {
         try {
-            const response = await this.api.get<{ items: IProduct[] }>('/product');
-            this.productModel.setItems(response.items);
-            this.renderCatalog();
+            const products = await this.apiShop.getProducts();
+            this.productModel.setItems(products);
+
+            this.catalogView.render(products);
         } catch (error) {
             console.error('Failed to load products:', error);
-            this.showError('Не удалось загрузить товары. Пожалуйста, обновите страницу.');
         }
-    }
-
-    private renderCatalog(): void {
-        const catalogContainer = document.querySelector('.gallery');
-        if (!catalogContainer) return;
-
-        const products = this.productModel.getItems();
-        const cards = products.map(product => {
-            const card = new Card(
-                this.cardTemplate,
-                this.events,
-                {
-                    onClick: () => this.events.emit('card:select', { id: product.id })
-                }
-            );
-            return card.render(product);
-        });
-        catalogContainer.replaceChildren(...cards);
     }
 
     private openProductDetails(productId: string): void {
@@ -135,42 +145,31 @@ export class Presenter {
         if (!product) return;
 
         this.productModel.setSelectedProduct(product);
+        this.isPreviewInBasket = this.basketModel.alreadyInBasket(productId);
 
-        const previewTemplate = document.querySelector<HTMLTemplateElement>('#card-preview');
-        if (!previewTemplate) {
-            console.error('Шаблон #card-preview не найден');
-            return;
-        }
-
-        const cardPreview = new CardPreview(
-            previewTemplate,
-            this.events,
-            {
-                onClick: () => this.events.emit('card:addBasket', { id: product.id })
-            }
-        );
-
-        this.modal.content = cardPreview.render(product);
+        this.modal.content = this.cardPreview.render(product, this.isPreviewInBasket);
         this.modal.open();
     }
 
-    private addToBasket(productId: string): void {
-        const product = this.productModel.getItemById(productId);
-        if (!product || product.price === null) return;
+    private handlePreviewButtonClick(): void {
+        const product = this.productModel.getSelectedProduct();
+        if (!product) return;
 
-        this.basketModel.addItem(product);
-        this.updateBasket();
+        if (this.isPreviewInBasket) {
+            this.basketModel.removeItem(product.id);
+        } else {
+            this.basketModel.addItem(product);
+        }
+
+        this.updateHeader();
         this.modal.close();
     }
 
-    private removeFromBasket(productId: string): void {
-        this.basketModel.removeItem(productId);
-        this.updateBasket();
+    private updateHeader(): void {
+        this.headerView.counter = this.basketModel.getCount();
     }
 
-    private updateBasket(): void {
-        this.headerView.counter = this.basketModel.getCount();
-
+    private updateBasketView(): void {
         const basketItems = this.basketModel.items.map((product, index) => {
             const basketItem = new BasketItem(
                 this.basketItemTemplate,
@@ -186,105 +185,47 @@ export class Presenter {
         this.basketView.renderSumAllProducts(this.basketModel.getTotal());
     }
 
-    private openBasket(): void {
-        this.updateBasket();
-        this.modal.content = this.basketView.render();
-        this.modal.open();
-    }
-
-    private openOrderForm(): void {
-        if (this.basketModel.getCount() === 0) return;
-
-        this.orderForm.paymentSelection = '';
-        this.orderForm.valid = false;
-        this.buyerModel.clear();
-
-        this.modal.content = this.orderForm.render();
-        this.modal.open();
-    }
-
-    private selectPayment(button: HTMLButtonElement): void {
-        this.buyerModel.setData({ payment: button.name as TPayment });
-        this.validateOrderForm();
-    }
-
-    private updateAddress(address: string): void {
-        this.buyerModel.setData({ address });
-        this.validateOrderForm();
-    }
-
-    private validateOrderForm(): void {
+    private validateOrderForm(): boolean {
         const errors = this.buyerModel.validate();
         const hasPaymentOrAddressError = !!errors.payment || !!errors.address;
+
+        const orderErrors: Record<string, string> = {};
+        if (errors.payment) orderErrors.payment = errors.payment;
+        if (errors.address) orderErrors.address = errors.address;
+
+        this.orderForm.errors = orderErrors;
         this.orderForm.valid = !hasPaymentOrAddressError;
+
+        return !hasPaymentOrAddressError;
     }
 
-    private validateOrderAndOpenContacts(): void {
-        const buyerData = this.buyerModel.getData();
-        const errors = this.buyerModel.validate();
-
-        console.log('Валидация заказа:', { buyerData, errors });
-
-        if (errors.payment || errors.address) {
-            console.error('Ошибки валидации заказа:', errors);
-            return;
-        }
-        this.openContactsForm();
-    }
-
-    private openContactsForm(): void {
-        this.contactsForm.valid = false;
-
-        this.modal.content = this.contactsForm.render();
-        this.modal.open();
-    }
-
-    private updateContact(field: string, value: string): void {
-        const updateData: Partial<{ email: string; phone: string }> = {};
-
-        if (field === 'email') {
-            updateData.email = value;
-        } else if (field === 'phone') {
-            updateData.phone = value;
-        }
-
-        this.buyerModel.setData(updateData);
-        this.validateContactForm();
-    }
-
-    private validateContactForm(): void {
+    private validateContactForm(): boolean {
         const errors = this.buyerModel.validate();
         const hasContactErrors = !!errors.email || !!errors.phone;
+
+        const contactErrors: Record<string, string> = {};
+        if (errors.email) contactErrors.email = errors.email;
+        if (errors.phone) contactErrors.phone = errors.phone;
+
+        this.contactsForm.errors = contactErrors;
         this.contactsForm.valid = !hasContactErrors;
+
+        return !hasContactErrors;
     }
 
     private async submitOrder(): Promise<void> {
-        console.log('submitOrder вызван');
-
-        const buyerData = this.buyerModel.getData();
-        const errors = this.buyerModel.validate();
-
-        console.log('Данные для заказа:', {
-            buyerData,
-            errors,
-            basketItems: this.basketModel.items.length,
-            total: this.basketModel.getTotal()
-        });
-
-        if (Object.keys(errors).length > 0) {
-            console.error('Ошибки валидации:', errors);
-            alert(`Пожалуйста, исправьте ошибки:\n${Object.values(errors).join('\n')}`);
+        if (!this.validateContactForm()) {
             return;
         }
 
-        if (this.basketModel.items.length === 0) {
-            console.error('Корзина пуста');
+        if (this.basketModel.getCount() === 0) {
             alert('Корзина пуста');
             return;
         }
 
+        const buyerData = this.buyerModel.getData();
         const orderData: IOrderRequest = {
-            payment: buyerData.payment,
+            payment: buyerData.payment!,
             email: buyerData.email,
             phone: buyerData.phone,
             address: buyerData.address,
@@ -292,50 +233,19 @@ export class Presenter {
             items: this.basketModel.items.map(item => item.id)
         };
 
-        console.log('Отправка заказа:', orderData);
-
         try {
-            if (!this.api) {
-                console.log('API не настроен, используем mock');
-                this.modal.content = this.successView.render(orderData.total);
-                this.modal.open();
-                this.basketModel.clear();
-                this.buyerModel.clear();
-                this.updateBasket();
-                return;
-            }
-
-            const response = await this.api.post<{ id: string; total: number }>('/order', orderData);
-            console.log('Ответ от сервера:', response);
+            const response = await this.apiShop.sendOrder(orderData);
 
             this.modal.content = this.successView.render(response.total);
             this.modal.open();
 
             this.basketModel.clear();
             this.buyerModel.clear();
-            this.updateBasket();
+            this.updateHeader();
 
         } catch (error) {
             console.error('Ошибка при отправке заказа:', error);
-            this.showError('Не удалось оформить заказ. Пожалуйста, попробуйте еще раз.');
+            alert('Не удалось оформить заказ. Пожалуйста, попробуйте еще раз.');
         }
-    }
-
-    private closeSuccess(): void {
-        this.modal.close();
-        this.buyerModel.clear();
-    }
-
-    private showError(message: string): void {
-        const errorElement = document.createElement('div');
-        errorElement.className = 'error-message';
-        errorElement.textContent = message;
-
-        this.modal.content = errorElement;
-        this.modal.open();
-
-        setTimeout(() => {
-            this.modal.close();
-        }, 3000);
     }
 }

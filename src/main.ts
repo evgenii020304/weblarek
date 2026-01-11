@@ -8,96 +8,57 @@ import { Basket } from './components/views/Basket';
 import { Success } from './components/views/Success';
 import { Order } from './components/views/FormOrder';
 import { Contacts } from './components/views/FormContact';
+import { HeaderView } from "./components/views/HeaderView.ts";
 import { Presenter } from './components/Presenter';
 import { API_URL } from './utils/constants';
+import {cloneTemplate, ensureElement} from './utils/utils';
+import {ApiShop} from "./components/api/ApiShop.ts";
 import './scss/styles.scss';
 
 const events = new EventEmitter();
 
 const api = new Api(API_URL);
+const apiShop = new ApiShop(api);
 
 const productModel = new ProductModel();
 const basketModel = new BasketModel();
 const buyerModel = new BuyerModel();
 
-const modalContainer = document.querySelector<HTMLElement>('#modal-container');
-const headerContainer = document.querySelector<HTMLElement>('.header');
+const modalContainer = ensureElement<HTMLElement>('#modal-container');
+const headerContainer = ensureElement<HTMLElement>('.header');
+const catalogContainer = ensureElement<HTMLElement>('.gallery');
 
-const basketTemplate = document.querySelector<HTMLTemplateElement>('#basket');
-const successTemplate = document.querySelector<HTMLTemplateElement>('#success');
-const orderTemplate = document.querySelector<HTMLTemplateElement>('#order');
-const contactsTemplate = document.querySelector<HTMLTemplateElement>('#contacts');
-const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-catalog');
-const basketItemTemplate = document.querySelector<HTMLTemplateElement>('#card-basket');
+const basketTemplate = ensureElement<HTMLTemplateElement>('#basket');
+const successTemplate = ensureElement<HTMLTemplateElement>('#success');
+const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
+const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
+const cardTemplate = ensureElement<HTMLTemplateElement>('#card-catalog');
+const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview');
+const basketItemTemplate = ensureElement<HTMLTemplateElement>('#card-basket');
 
 console.log('Найденные элементы:', {
     modalContainer: !!modalContainer,
     headerContainer: !!headerContainer,
+    catalogContainer: !!catalogContainer,
     basketTemplate: !!basketTemplate,
     successTemplate: !!successTemplate,
     orderTemplate: !!orderTemplate,
     contactsTemplate: !!contactsTemplate,
     cardTemplate: !!cardTemplate,
+    cardPreviewTemplate: !!cardPreviewTemplate,
     basketItemTemplate: !!basketItemTemplate
 });
 
-if (!modalContainer) {
-    throw new Error('Не найден элемент: #modal-container');
-}
-if (!headerContainer) {
-    throw new Error('Не найден элемент: .header');
-}
-if (!basketTemplate) {
-    throw new Error('Не найден шаблон: #basket');
-}
-if (!successTemplate) {
-    throw new Error('Не найден шаблон: #success');
-}
-if (!orderTemplate) {
-    throw new Error('Не найден шаблон: #order');
-}
-if (!contactsTemplate) {
-    throw new Error('Не найден шаблон: #contacts');
-}
-if (!cardTemplate) {
-    throw new Error('Не найден шаблон: #card-catalog');
-}
-if (!basketItemTemplate) {
-    throw new Error('Не найден шаблон: #card-basket');
-}
-
-const basketElement = basketTemplate.content.querySelector('.basket');
-const successElement = successTemplate.content.querySelector('.order-success');
-const contactsElement = contactsTemplate.content.querySelector('.form');
-const basketItemElement = basketItemTemplate.content.querySelector('.basket__item');
-
-console.log('Элементы из шаблонов:', {
-    basketElement: !!basketElement,
-    successElement: !!successElement,
-    contactsElement: !!contactsElement,
-    basketItemElement: !!basketItemElement
-});
-
-if (!basketElement) {
-    throw new Error('Не найден элемент .basket в шаблоне #basket');
-}
-if (!successElement) {
-    throw new Error('Не найден элемент .order-success в шаблоне #success');
-}
-if (!contactsElement) {
-    throw new Error('Не найден элемент .form в шаблоне #contacts');
-}
-if (!basketItemElement) {
-    throw new Error('Не найден элемент .basket__item в шаблоне #card-basket');
-}
+const basketElement = cloneTemplate<HTMLElement>(basketTemplate);
+const successElement = cloneTemplate<HTMLElement>(successTemplate);
+const contactsElement = cloneTemplate<HTMLElement>(contactsTemplate);
 
 const modal = new Modal(modalContainer, events);
-const basketView = new Basket(basketContainer, events);
-const successView = new Success(successContainer, events);
+const basketView = new Basket(basketElement, events);
+const successView = new Success(successElement, events);
 const orderForm = new Order(orderTemplate, events);
-const contactsForm = new Contacts(contactsContainer, events);
-
-console.log('Представления инициализированы');
+const contactsForm = new Contacts(contactsElement, events);
+const headerView = new HeaderView(events, headerContainer);
 
 const presenter = new Presenter(
     events,
@@ -109,13 +70,13 @@ const presenter = new Presenter(
     successView,
     orderForm,
     contactsForm,
-    api,
+    headerView,
+    apiShop,
     cardTemplate,
-    basketItemContainer,
-    headerContainer
+    basketItemTemplate,
+    cardPreviewTemplate,
+    catalogContainer
 );
-
-console.log('Приложение инициализировано успешно');
 
 (window as any).app = {
     events,

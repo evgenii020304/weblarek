@@ -1,14 +1,14 @@
 import { Component } from "../base/Component";
-import {IEvents} from "../base/Events";
-import {ensureElement} from "../../utils/utils.ts";
+import { IEvents } from "../base/Events";
+import { ensureElement } from "../../utils/utils";
 
 interface IHeader {
     counter: number;
 }
 
-export class HeaderView extends Component<IHeader>{
-    protected counterElement : HTMLElement;
-    protected basketButton : HTMLElement;
+export class HeaderView extends Component<IHeader> {
+    protected counterElement: HTMLElement;
+    protected basketButton: HTMLButtonElement;
 
     constructor(protected events: IEvents, container: HTMLElement) {
         super(container);
@@ -24,5 +24,4 @@ export class HeaderView extends Component<IHeader>{
     set counter(value: number) {
         this.counterElement.textContent = String(value);
     }
-
 }

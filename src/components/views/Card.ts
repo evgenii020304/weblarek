@@ -1,7 +1,7 @@
 import { IActions, IProduct } from "../../types";
 import { IEvents } from "../base/Events.ts";
-import {categoryMap, CDN_URL} from "../../utils/constants";
-import "../../scss/styles.scss"
+import { categoryMap, CDN_URL } from "../../utils/constants";
+import { ensureElement, cloneTemplate } from "../../utils/utils";
 
 export interface ICard {
     render(data: IProduct): HTMLElement;
@@ -13,29 +13,26 @@ export class Card implements ICard {
     protected _cardTitle: HTMLElement;
     protected _cardImage: HTMLImageElement;
     protected _cardPrice: HTMLElement;
-    protected _data: IProduct | null = null;
 
-    constructor(container: HTMLTemplateElement, protected events: IEvents, actions?: IActions) {
-        this._cardElement = container.content.querySelector('.card')!.cloneNode(true) as HTMLElement;
-        this._cardCategory = this._cardElement.querySelector('.card__category')!;
-        this._cardTitle = this._cardElement.querySelector('.card__title')!;
-        this._cardImage = this._cardElement.querySelector('.card__image')!;
-        this._cardPrice = this._cardElement.querySelector('.card__price')!;
+    constructor(template: HTMLTemplateElement, protected events: IEvents, actions?: IActions) {
+        this._cardElement = cloneTemplate<HTMLElement>(template);
+
+        this._cardCategory = ensureElement<HTMLElement>('.card__category', this._cardElement);
+        this._cardTitle = ensureElement<HTMLElement>('.card__title', this._cardElement);
+        this._cardImage = ensureElement<HTMLImageElement>('.card__image', this._cardElement);
+        this._cardPrice = ensureElement<HTMLElement>('.card__price', this._cardElement);
 
         if (actions?.onClick) {
             this._cardElement.addEventListener('click', actions.onClick);
         }
     }
 
-    protected setText(element: HTMLElement, value: unknown)  {
-        if (element) {
-            return element.textContent = String(value);
-        }
+    protected setText(element: HTMLElement, value: unknown) {
+        element.textContent = String(value);
     }
 
     protected setCategory(value: string): void {
         this.setText(this._cardCategory, value);
-
         const categoryClass = categoryMap[value as keyof typeof categoryMap];
         if (categoryClass) {
             this._cardCategory.className = 'card__category';
@@ -58,8 +55,6 @@ export class Card implements ICard {
         this._cardImage.alt = data.title;
         this._cardPrice.textContent = this.formatPrice(data.price);
 
-        this._cardElement.dataset.id = data.id;
-        this._data = data;
         return this._cardElement;
     }
 }

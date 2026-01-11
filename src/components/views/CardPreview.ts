@@ -3,67 +3,76 @@ import { IActions, IProduct } from "../../types";
 import { IEvents } from "../base/Events.ts";
 
 export interface ICardPreview {
-    text: HTMLElement;
-    button: HTMLElement;
-    render(data: IProduct): HTMLElement;
+    text: HTMLElement | null;
+    button: HTMLButtonElement | null;
+    render(data: IProduct, isInBasket?: boolean): HTMLElement;
 }
 
 export class CardPreview extends Card implements ICardPreview {
-    protected _cardText: HTMLElement;
-    protected _cardButton: HTMLButtonElement | null;
+    protected _cardText: HTMLElement | null = null;
+    protected _cardButton: HTMLButtonElement | null = null;
 
-    constructor(container: HTMLTemplateElement, protected events: IEvents, actions?: IActions) {
-        super(container, events, actions);
+    constructor(template: HTMLTemplateElement, protected events: IEvents, actions?: IActions) {
+        super(template, events, actions);
 
-        this._cardText = this._cardElement.querySelector('.card__text')!;
+        this._cardText = this._cardElement.querySelector('.card__text');
         this._cardButton = this._cardElement.querySelector('.card__button');
 
-        if (this._cardButton) {
-            if (actions?.onClick) {
-                this._cardButton.addEventListener('click', actions.onClick);
-            } else {
-                this._cardButton.addEventListener('click', () => {
-                    const cardId = this._cardElement.dataset.id;
-                    if (cardId) {
-                        this.events.emit('card:addBasket', { id: cardId });
-                    }
-                });
-            }
-        } else {
-            console.warn('Кнопка .card__button не найдена в шаблоне карточки превью');
+        if (this._cardButton && actions?.onClick) {
+            this._cardButton.addEventListener('click', actions.onClick);
         }
     }
 
-    get text(): HTMLElement {
+    get text(): HTMLElement | null {
         return this._cardText;
     }
 
-    get button(): HTMLElement {
-        return this._cardButton!;
+    get button(): HTMLButtonElement | null {
+        return this._cardButton;
     }
 
-    protected checkAvailability(data: IProduct): string {
-        if (data.price !== null) {
-            return 'Купить';
-        } else {
-            if (this._cardButton) {
-                this._cardButton.setAttribute('disabled', 'true');
-            }
+    protected getButtonText(data: IProduct, isInBasket: boolean): string {
+        if (data.price === null) {
             return 'Не продается';
+        } else if (isInBasket) {
+            return 'Удалить из корзины';
+        } else {
+            return 'В корзину';
         }
     }
 
-    render(data: IProduct): HTMLElement {
+    protected updateButtonState(data: IProduct, isInBasket: boolean): void {
+        if (!this._cardButton) return;
+
+        this._cardButton.textContent = this.getButtonText(data, isInBasket);
+
+        if (data.price === null) {
+            this._cardButton.setAttribute('disabled', 'true');
+        } else {
+            this._cardButton.removeAttribute('disabled');
+        }
+    }
+
+    render(data: IProduct, isInBasket: boolean = false): HTMLElement {
         super.render(data);
+
         if (data.description && this._cardText) {
             this._cardText.textContent = data.description;
         }
-        if (this._cardButton) {
-            this._cardButton.textContent = this.checkAvailability(data);
-            if (data.price !== null) {
-                this._cardButton.removeAttribute('disabled');
+
+        this.updateButtonState(data, isInBasket);
+
+        return this._cardElement;
+    }
+
+    updateBasketState(isInBasket: boolean): void {
+        if (this._cardButton && this._cardButton.textContent) {
+            const currentText = this._cardButton.textContent;
+            if (isInBasket && currentText !== 'Удалить из корзины') {
+                this._cardButton.textContent = 'Удалить из корзины';
+            } else if (!isInBasket && currentText !== 'В корзину') {
+                this._cardButton.textContent = 'В корзину';
             }
         }
-        return this._cardElement;
     }
 }

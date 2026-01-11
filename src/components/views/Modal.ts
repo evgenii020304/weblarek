@@ -1,26 +1,35 @@
 import { IEvents } from "../base/Events.ts";
+import { ensureElement } from "../../utils/utils";
 
 export interface IModal {
     open(): void;
     close(): void;
-    render(): HTMLElement
+    render(): HTMLElement;
+    set content(value: HTMLElement | null);
+    get content(): HTMLElement;
+    set locked(value: boolean);
 }
 
 export class Modal implements IModal {
     protected modalContainer: HTMLElement;
     protected closeButton: HTMLButtonElement;
     protected _content: HTMLElement;
-    protected _pageWrapper: HTMLElement;
+    protected _modalContainer: HTMLElement;
 
     constructor(container: HTMLElement, protected events: IEvents) {
         this.modalContainer = container;
-        this.closeButton = container.querySelector('.modal__close')!;
-        this._content = container.querySelector('.modal__content')!;
-        this._pageWrapper = document.querySelector('.page__wrapper')!;
 
-        this.closeButton.addEventListener('click', this.close.bind(this));
-        this.modalContainer.addEventListener('click', this.close.bind(this));
-        this.modalContainer.querySelector('.modal__container')!.addEventListener('click', event => event.stopPropagation());
+        this._modalContainer = ensureElement<HTMLElement>('.modal__container', this.modalContainer);
+        this.closeButton = ensureElement<HTMLButtonElement>('.modal__close', this.modalContainer);
+        this._content = ensureElement<HTMLElement>('.modal__content', this.modalContainer);
+
+        this.closeButton.addEventListener('click', () => this.close());
+
+        this.modalContainer.addEventListener('click', (event: MouseEvent) => {
+            if (event.target === this.modalContainer) {
+                this.close();
+            }
+        });
     }
 
     set content(value: HTMLElement | null) {
@@ -48,15 +57,14 @@ export class Modal implements IModal {
 
     set locked(value: boolean) {
         if (value) {
-            this._pageWrapper.classList.add('page__wrapper_locked');
+            document.body.classList.add('page__wrapper_locked');
         } else {
-            this._pageWrapper.classList.remove('page__wrapper_locked');
+            document.body.classList.remove('page__wrapper_locked');
         }
     }
 
     render(): HTMLElement {
-        this._content;
         this.open();
-        return this.modalContainer
+        return this.modalContainer;
     }
 }
