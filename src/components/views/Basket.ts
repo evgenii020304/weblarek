@@ -3,7 +3,6 @@ import { ensureElement } from "../../utils/utils";
 
 export interface IBasket {
     basket: HTMLElement;
-    title: HTMLElement;
     basketList: HTMLElement;
     button: HTMLButtonElement;
     basketPrice: HTMLElement;
@@ -13,7 +12,6 @@ export interface IBasket {
 
 export class Basket implements IBasket {
     basket: HTMLElement;
-    title: HTMLElement;
     basketList: HTMLElement;
     button: HTMLButtonElement;
     basketPrice: HTMLElement;
@@ -21,7 +19,9 @@ export class Basket implements IBasket {
     constructor(container: HTMLElement, protected events: IEvents) {
         this.basket = container;
 
-        this.title = ensureElement<HTMLElement>('.modal__title', this.basket);
+        const title = ensureElement<HTMLElement>('.modal__title', this.basket);
+        title.textContent = 'Корзина';
+
         this.basketList = ensureElement<HTMLElement>('.basket__list', this.basket);
         this.button = ensureElement<HTMLButtonElement>('.basket__button', this.basket);
         this.basketPrice = ensureElement<HTMLElement>('.basket__price', this.basket);
@@ -46,7 +46,6 @@ export class Basket implements IBasket {
     }
 
     render(): HTMLElement {
-        this.title.textContent = 'Корзина';
         return this.basket;
     }
 }

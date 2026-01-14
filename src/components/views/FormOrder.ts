@@ -1,6 +1,6 @@
 import { IEvents } from "../base/Events.ts";
 import { ensureElement, cloneTemplate } from "../../utils/utils";
-import { IValidationResult } from "../../types";
+import { IValidationResult, IBuyer } from "../../types";
 
 export interface IOrder {
     formOrder: HTMLFormElement;
@@ -10,6 +10,7 @@ export interface IOrder {
     render(): HTMLElement;
     set valid(value: boolean);
     set errors(value: IValidationResult);
+    updateData(data: IBuyer): void;
 }
 
 export class Order implements IOrder {
@@ -57,6 +58,17 @@ export class Order implements IOrder {
     set errors(value: IValidationResult) {
         const errorMessages = Object.values(value).filter(Boolean);
         this.formErrors.textContent = errorMessages.join('. ');
+    }
+
+    updateData(data: IBuyer): void {
+        if (data.payment) {
+            this.paymentSelection = data.payment;
+        }
+
+        const addressInput = this.formOrder.querySelector('input[name="address"]') as HTMLInputElement;
+        if (addressInput) {
+            addressInput.value = data.address || '';
+        }
     }
 
     render() {

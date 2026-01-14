@@ -1,6 +1,6 @@
 import { IEvents } from "../base/Events.ts";
 import { ensureElement } from "../../utils/utils";
-import { IValidationResult } from "../../types";
+import { IBuyer, IValidationResult } from "../../types";
 
 export interface IContacts {
     formContacts: HTMLFormElement;
@@ -10,6 +10,7 @@ export interface IContacts {
     render(): HTMLElement;
     set valid(value: boolean);
     set errors(value: IValidationResult);
+    updateData(data: IBuyer): void;
 }
 
 export class Contacts implements IContacts {
@@ -46,6 +47,18 @@ export class Contacts implements IContacts {
     set errors(value: IValidationResult) {
         const errorMessages = Object.values(value).filter(Boolean);
         this.formErrors.textContent = errorMessages.join('. ');
+    }
+
+    updateData(data: IBuyer): void {
+        const emailInput = this.formContacts.querySelector('input[name="email"]') as HTMLInputElement;
+        if (emailInput) {
+            emailInput.value = data.email || '';
+        }
+
+        const phoneInput = this.formContacts.querySelector('input[name="phone"]') as HTMLInputElement;
+        if (phoneInput) {
+            phoneInput.value = data.phone || '';
+        }
     }
 
     render() {

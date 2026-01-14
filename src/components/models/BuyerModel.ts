@@ -1,6 +1,7 @@
 import { IBuyer, IValidationResult } from '../../types';
+import { EventEmitter} from "../base/Events";
 
-export class BuyerModel {
+export class BuyerModel extends EventEmitter {
     private _data: IBuyer = {
         payment: null,
         email: '',
@@ -8,10 +9,17 @@ export class BuyerModel {
         address: '',
     };
 
-    constructor() {}
+    constructor() {
+        super();
+    }
 
     setData(data: Partial<IBuyer>): void {
+        const oldData = { ...this._data };
         this._data = { ...this._data, ...data };
+
+        if (JSON.stringify(oldData) !== JSON.stringify(this._data)) {
+            this.emit('data:changed', this._data);
+        }
     }
 
     getData(): IBuyer {
@@ -48,13 +56,51 @@ export class BuyerModel {
         return Object.keys(this.validate()).length === 0;
     }
 
+    validateOrderForm(): IValidationResult {
+        const errors: IValidationResult = {};
+
+        if (!this._data.payment) {
+            errors.payment = 'Выберите способ оплаты';
+        }
+
+        if (!this._data.address.trim()) {
+            errors.address = 'Введите адрес';
+        }
+
+        return errors;
+    }
+
+    validateContactForm(): IValidationResult {
+        const errors: IValidationResult = {};
+
+        if (!this._data.email.trim()) {
+            errors.email = 'Введите email';
+        } else if (!this.isValidEmail(this._data.email)) {
+            errors.email = 'Введите корректный email';
+        }
+
+        if (!this._data.phone.trim()) {
+            errors.phone = 'Введите телефон';
+        } else if (!this.isValidPhone(this._data.phone)) {
+            errors.phone = 'Введите корректный телефон';
+        }
+
+        return errors;
+    }
+
     clear(): void {
+        const oldData = { ...this._data };
         this._data = {
             payment: null,
             email: '',
             phone: '',
             address: '',
         };
+
+        if (JSON.stringify(oldData) !== JSON.stringify(this._data)) {
+            this.emit('data:changed', this._data);
+            this.emit('data:cleared');
+        }
     }
 
     private isValidEmail(email: string): boolean {

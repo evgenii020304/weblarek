@@ -18,8 +18,11 @@ export class CardPreview extends Card implements ICardPreview {
         this._cardText = this._cardElement.querySelector('.card__text');
         this._cardButton = this._cardElement.querySelector('.card__button');
 
-        if (this._cardButton && actions?.onClick) {
-            this._cardButton.addEventListener('click', actions.onClick);
+        if (this._cardButton) {
+            this._cardButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                this.events.emit('card:toggleBasket');
+            });
         }
     }
 

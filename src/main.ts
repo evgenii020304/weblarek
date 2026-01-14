@@ -9,6 +9,8 @@ import { Success } from './components/views/Success';
 import { Order } from './components/views/FormOrder';
 import { Contacts } from './components/views/FormContact';
 import { HeaderView } from "./components/views/HeaderView.ts";
+import { CardPreview } from "./components/views/CardPreview.ts";
+import { CatalogView } from "./components/views/CatalogView.ts";
 import { Presenter } from './components/Presenter';
 import { API_URL } from './utils/constants';
 import {cloneTemplate, ensureElement} from './utils/utils';
@@ -36,19 +38,6 @@ const cardTemplate = ensureElement<HTMLTemplateElement>('#card-catalog');
 const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview');
 const basketItemTemplate = ensureElement<HTMLTemplateElement>('#card-basket');
 
-console.log('Найденные элементы:', {
-    modalContainer: !!modalContainer,
-    headerContainer: !!headerContainer,
-    catalogContainer: !!catalogContainer,
-    basketTemplate: !!basketTemplate,
-    successTemplate: !!successTemplate,
-    orderTemplate: !!orderTemplate,
-    contactsTemplate: !!contactsTemplate,
-    cardTemplate: !!cardTemplate,
-    cardPreviewTemplate: !!cardPreviewTemplate,
-    basketItemTemplate: !!basketItemTemplate
-});
-
 const basketElement = cloneTemplate<HTMLElement>(basketTemplate);
 const successElement = cloneTemplate<HTMLElement>(successTemplate);
 const contactsElement = cloneTemplate<HTMLElement>(contactsTemplate);
@@ -59,6 +48,16 @@ const successView = new Success(successElement, events);
 const orderForm = new Order(orderTemplate, events);
 const contactsForm = new Contacts(contactsElement, events);
 const headerView = new HeaderView(events, headerContainer);
+const catalogView = new CatalogView(catalogContainer, events);
+const cardPreview = new CardPreview(
+    cardPreviewTemplate,
+    events,
+    {
+        onClick: () => {
+            presenter.handlePreviewButtonClick();
+        }
+    }
+);
 
 const presenter = new Presenter(
     events,
@@ -70,12 +69,12 @@ const presenter = new Presenter(
     successView,
     orderForm,
     contactsForm,
+    catalogView,
     headerView,
+    cardPreview,
     apiShop,
     cardTemplate,
-    basketItemTemplate,
-    cardPreviewTemplate,
-    catalogContainer
+    basketItemTemplate
 );
 
 (window as any).app = {
