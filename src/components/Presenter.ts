@@ -12,7 +12,7 @@ import { Card } from "./views/Card.ts";
 import { ProductModel } from "./models/ProductModel";
 import { BasketModel } from "./models/BasketModel";
 import { BuyerModel } from "./models/BuyerModel";
-import { IOrderRequest, IProduct, TPayment, IBuyer } from "../types";
+import { IOrderRequest, IProduct, TPayment, IBuyer, IValidationResult } from "../types";
 import { ApiShop } from "./api/ApiShop";
 
 export class Presenter {
@@ -91,8 +91,10 @@ export class Presenter {
         });
 
         this.events.on('order:submit', () => {
-            const errors = this.buyerModel.validateOrderForm();
-            if (Object.keys(errors).length === 0) {
+            const allErrors = this.buyerModel.validate();
+            const hasOrderErrors = !!allErrors.payment || !!allErrors.address;
+
+            if (!hasOrderErrors) {
                 this.modal.content = this.contactsForm.render();
                 this.modal.open();
             }
@@ -119,8 +121,17 @@ export class Presenter {
     }
 
     private async loadProducts(): Promise<void> {
-        const products = await this.apiShop.getProducts();
-        this.productModel.setItems(products);
+        try {
+            const products = await this.apiShop.getProducts();
+            this.productModel.setItems(products);
+        } catch (error) {
+            console.error('Failed to load products:', error);
+            this.showError('Не удалось загрузить товары. Пожалуйста, обновите страницу.');
+        }
+    }
+
+    private showError(message: string): void {
+        console.error('Ошибка:', message);
     }
 
     private renderCatalog(items: IProduct[]): void {
@@ -165,14 +176,24 @@ export class Presenter {
 
     private updateFormsWithModelData(data: IBuyer): void {
         this.orderForm.updateData(data);
-        const orderErrors = this.buyerModel.validateOrderForm();
+
+        const allErrors = this.buyerModel.validate();
+
+        const orderErrors: IValidationResult = {};
+        if (allErrors.payment) orderErrors.payment = allErrors.payment;
+        if (allErrors.address) orderErrors.address = allErrors.address;
+
         this.orderForm.errors = orderErrors;
-        this.orderForm.valid = Object.keys(orderErrors).length === 0;
+        this.orderForm.valid = !orderErrors.payment && !orderErrors.address;
 
         this.contactsForm.updateData(data);
-        const contactErrors = this.buyerModel.validateContactForm();
+
+        const contactErrors: IValidationResult = {};
+        if (allErrors.email) contactErrors.email = allErrors.email;
+        if (allErrors.phone) contactErrors.phone = allErrors.phone;
+
         this.contactsForm.errors = contactErrors;
-        this.contactsForm.valid = Object.keys(contactErrors).length === 0;
+        this.contactsForm.valid = !contactErrors.email && !contactErrors.phone;
     }
 
     private updateBasketView(): void {

@@ -1,5 +1,5 @@
 import { IBuyer, IValidationResult } from '../../types';
-import { EventEmitter} from "../base/Events";
+import { EventEmitter } from "../base/Events";
 
 export class BuyerModel extends EventEmitter {
     private _data: IBuyer = {
@@ -54,38 +54,6 @@ export class BuyerModel extends EventEmitter {
 
     isValid(): boolean {
         return Object.keys(this.validate()).length === 0;
-    }
-
-    validateOrderForm(): IValidationResult {
-        const errors: IValidationResult = {};
-
-        if (!this._data.payment) {
-            errors.payment = 'Выберите способ оплаты';
-        }
-
-        if (!this._data.address.trim()) {
-            errors.address = 'Введите адрес';
-        }
-
-        return errors;
-    }
-
-    validateContactForm(): IValidationResult {
-        const errors: IValidationResult = {};
-
-        if (!this._data.email.trim()) {
-            errors.email = 'Введите email';
-        } else if (!this.isValidEmail(this._data.email)) {
-            errors.email = 'Введите корректный email';
-        }
-
-        if (!this._data.phone.trim()) {
-            errors.phone = 'Введите телефон';
-        } else if (!this.isValidPhone(this._data.phone)) {
-            errors.phone = 'Введите корректный телефон';
-        }
-
-        return errors;
     }
 
     clear(): void {
